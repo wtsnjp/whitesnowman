@@ -1,0 +1,29 @@
+%%
+%% This is file `whitesnowman.sty'.
+%%
+%% Copyright (c) 2017 Takuto ASAKURA (wtsnjp)
+%%   GitHub:   https://github.com/wtsnjp
+%%   Twitter:  @wtsnjp
+%%
+%% This package is distributed under the MIT License.
+%%
+
+% package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{whitesnowman}[2017/08/08 A language of snowman]
+\def\whsn@pkgname{whitesnowman}
+
+% code guards
+\edef\whsn@restore@codes{%
+  \catcode`☃=\the\catcode`☃%
+  \catcode`⛄=\the\catcode`⛄%
+\relax}
+\catcode`☃=\active
+\catcode`⛄=\active
+\AtEndOfPackage{%
+  \whsn@restore@codes \let\whsn@restore@codes\relax}
+
+% All done
+\endinput
+
+%% EOF
