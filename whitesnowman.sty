@@ -20,7 +20,7 @@
 % debug flags
 \newif\if@whsn@out@op@type@ \@whsn@out@op@type@true
 \newif\if@whsn@out@op@ \@whsn@out@op@true
-\newif\if@whsn@out@read@ \@whsn@out@read@true
+\newif\if@whsn@out@read@ \@whsn@out@read@false
 
 % new ifs / new counts
 \newif\if@whsn@printed@
@@ -65,12 +65,16 @@
   \fi}
 
 % snowman to number
-\def\whsn@number#1{%
+\def\whsn@number#1#2\@nil{%
   \whsn@calc\z@ \whsn@tmpcnta\@ne
-  \edef\whsn@seq{\whsn@reverse{#1}}%
+  \edef\whsn@seq{\whsn@reverse{#2}}%
   \expandafter\@tfor\expandafter\whsn@tmp\expandafter:\expandafter=\whsn@seq
     \do{\ifx\whsn@t\whsn@tmp \advance\whsn@calc\whsn@tmpcnta \fi
-        \multiply\whsn@tmpcnta\tw@}}
+        \multiply\whsn@tmpcnta\tw@}%
+  \def\whsn@tmp{#1}%
+  \ifx\whsn@tmp\whsn@t
+    \multiply\whsn@calc\m@ne
+  \fi}
 
 % read next
 \long\def\whsn@next#1#2#3#4#5#6{% cases: ☃ ⛄ ⛇ end ?
@@ -93,15 +97,15 @@
   \whsn@imp@i
 }{%
   \whsn@exec
-  \whsn@clean
+  \whsn@finish
 }
 
-%------------------------------------------- initialize / clean up
+%------------------------------------------- initialize / finish
 
 \def\whsn@init{%
   \@whsn@printed@false
-  \whsn@pc\z@\whsn@sp\m@ne}
-\def\whsn@clean{%
+  \whsn@pc\z@ \whsn@sp\m@ne}
+\def\whsn@finish{%
   \if@whsn@printed@\message{^^J}\fi}
 
 %------------------------------------------- exec
@@ -155,11 +159,9 @@
     \whsn@print@op{push}%
     \whsn@stack@push
   }{%
-    \whsn@error
-      {Invalid stack command}
-      {Check your whitesnowman code}%
+    \whsn@stack@ii@t
   }{%
-    \whsn@stack@ii
+    \whsn@stack@ii@l
   }{%
     \whsn@error
       {Missing stack command}
@@ -167,25 +169,50 @@
   }{%
     \whsn@stack@i
   }}
-\def\whsn@stack@ii#1{%
+\def\whsn@stack@ii@l#1{%
   \whsn@next#1{%
-    \whsn@print@op{copy}%
+    \whsn@print@op{dup}%
+    \whsn@add@ops{\whsn@exec@stack@dup}%
     \whsn@imp@i
   }{%
     \whsn@print@op{swap}%
+    \whsn@add@ops{\whsn@exec@stack@swap}%
     \whsn@imp@i
   }{%
-    \whsn@print@op{dup}
+    \whsn@print@op{discard}%
+    \whsn@add@ops{\whsn@exec@stack@discard}%
     \whsn@imp@i
   }{%
     \whsn@error
       {Invalid stack command}
       {Check your whitesnowman code}%
   }{%
-    \whsn@stack@ii
+    \whsn@stack@ii@l
+  }}
+\def\whsn@stack@ii@t#1{%
+  \whsn@next#1{%
+    \whsn@print@op{copy}%
+    \whsn@stack@copy
+  }{%
+    \whsn@error
+      {Invalid stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@stack@ii@t
   }}
 \def\whsn@stack@push#1⛇{%
-  \whsn@add@ops{\whsn@exec@stack@push{#1}}
+  \whsn@add@ops{\whsn@exec@stack@push#1\@nil}
+  \whsn@imp@i}
+\def\whsn@stack@copy#1⛇{%
+  \whsn@add@ops{\whsn@exec@stack@copy#1\@nil}
   \whsn@imp@i}
 
 % i/o
@@ -207,12 +234,12 @@
   }}
 \def\whsn@io@ii@s#1{%
   \whsn@next#1{%
-    \whsn@print@op{write char}
-    \whsn@add@ops{\whsn@exec@io@putchar}
+    \whsn@print@op{put char}%
+    \whsn@add@ops{\whsn@exec@io@putchar}%
     \whsn@imp@i
   }{%
-    \whsn@print@op{write number}
-    \whsn@add@ops{\whsn@exec@io@putnum}
+    \whsn@print@op{put number}%
+    \whsn@add@ops{\whsn@exec@io@putnumber}%
     \whsn@imp@i
   }{%
     \whsn@error
@@ -227,10 +254,10 @@
   }}
 \def\whsn@io@ii@t#1{%
   \whsn@next#1{%
-    \whsn@print@op{read char}
+    \whsn@print@op{read char}%
     \whsn@imp@i
   }{%
-    \whsn@print@op{read number}
+    \whsn@print@op{read number}%
     \whsn@imp@i
   }{%
     \whsn@error
@@ -246,20 +273,61 @@
 
 %------------------------------------------- stack
 
-\def\whsn@exec@stack@push#1{%
+\def\whsn@exec@stack@push#1\@nil{%
   \advance\whsn@pc\@ne
-  \whsn@number{#1}%
+  \whsn@number #1\@nil
   \advance\whsn@sp\@ne
   \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@calc}}
+\def\whsn@exec@stack@copy#1\@nil{%
+  \advance\whsn@pc\@ne
+  \whsn@number #1\@nil
+  \ifnum\whsn@calc<\@ne
+    \whsn@error
+      {Cannot specify number < 1 for `stack copy' command}
+      {Please specify larger number}%
+  \fi
+  \advance\whsn@sp\@ne
+  \whsn@tmpcnta\whsn@sp \advance\whsn@tmpcnta-\whsn@calc
+  \ifnum\whsn@tmpcnta>\m@ne
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}%
+      {\@nameuse{whsn@stack@\the\whsn@tmpcnta}}%
+  \else
+    \whsn@error
+      {Cannnot access the specified location of the stack}
+      {Please specify smaller number}%
+  \fi}
+\def\whsn@exec@stack@dup{%
+  \advance\whsn@pc\@ne
+  \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+  \advance\whsn@sp\@ne
+  \whsn@name@edef{whsn@stack@\the\whsn@sp}{\whsn@tmp}}
+\def\whsn@exec@stack@swap{%
+  \advance\whsn@pc\@ne
+  \whsn@tmpcnta\whsn@sp \advance\whsn@tmpcnta\m@ne
+  \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+  \whsn@name@edef{whsn@stack@\the\whsn@sp}%
+    {\@nameuse{whsn@stack@\the\whsn@tmpcnta}}%
+  \whsn@name@edef{whsn@stack@\the\whsn@tmpcnta}{\whsn@tmp}}
+\def\whsn@exec@stack@discard{%
+  \advance\whsn@pc\@ne
+  \advance\whsn@sp\m@ne}
 
 %------------------------------------------- i/o
 
-\def\whsn@exec@io@putchar#1{%
+\def\whsn@exec@io@putchar{%
   \advance\whsn@pc\@ne
-  \char\@nameuse{whsn@stack@\the\whsn@sp}}
-\def\whsn@exec@io@putnum#1{%
+  \ifnum\whsn@sp>\m@ne
+    \char\@nameuse{whsn@stack@\the\whsn@sp}%
+  \else
+    \whsn@warn{Stack is empty}%
+  \fi}
+\def\whsn@exec@io@putnumber{%
   \advance\whsn@pc\@ne
-  \number\@nameuse{whsn@stack@\the\whsn@sp}}
+  \ifnum\whsn@sp>\m@ne
+    \number\@nameuse{whsn@stack@\the\whsn@sp}%
+  \else
+    \whsn@warn{Stack is empty}%
+  \fi}
 
 % All done
 \endinput
