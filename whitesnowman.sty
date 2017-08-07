@@ -13,6 +13,10 @@
 \ProvidesPackage{whitesnowman}[2017/08/08 A language of snowman]
 \def\whsn@pkgname{whitesnowman}
 
+% messages
+\def\whsn@warn{\PackageWarningNoLine\whsn@pkgname}
+\def\whsn@error{\PackageError\whsn@pkgname}
+
 % code guards
 \edef\whsn@restore@codes{%
   \catcode`☃=\the\catcode`☃%
@@ -22,6 +26,132 @@
 \catcode`⛄=\active
 \AtEndOfPackage{%
   \whsn@restore@codes \let\whsn@restore@codes\relax}
+
+% debug flags
+\newif\if@whsn@debug@ \@whsn@debug@true
+\newif\if@whsn@out@op@type@ \@whsn@out@op@type@true
+\newif\if@whsn@out@op@ \@whsn@out@op@true
+\newif\if@whsn@out@read@ \@whsn@out@read@true
+
+% chars
+\def\whsn@s{☃}
+\def\whsn@t{⛄}
+\def\whsn@l{⛇}
+
+%------------------------------------------- utility
+
+% print
+\def\whsn@print@op@type#1{%
+  \if@whsn@out@op@type@
+    \message{^^JOP TYPE: #1}%
+  \fi}
+\def\whsn@print@op#1{%
+  \if@whsn@out@op@
+    \message{^^JOP: #1}%
+  \fi}
+\long\def\whsn@print@read#1{%
+  \if@whsn@out@read@
+    \message{^^JREAD: \noexpand#1}%
+  \fi}
+
+% parse
+\long\def\whsn@next#1#2#3#4#5#6{% cases: ☃ ⛄ ⛇ end ?
+  \whsn@print@read{#1}\def\whsn@tmp{#1}%
+  \ifx\whsn@s\whsn@tmp\whsn@next@hop@i#2%
+  \else\ifx\whsn@t\whsn@tmp\whsn@next@hop@ii#3%
+  \else\ifx\whsn@l\whsn@tmp\whsn@next@hop@iii#4%
+  \else\ifx\end#1\whsn@next@hop@iv#5%
+  \else\whsn@next@hop@v#6\fi\fi\fi\fi}
+\long\def\whsn@next@hop@i#1\else#2\fi\fi\fi\fi{\fi #1}
+\long\def\whsn@next@hop@ii#1\else#2\fi\fi\fi\fi{\fi\fi #1}
+\long\def\whsn@next@hop@iii#1\else#2\fi\fi\fi\fi{\fi\fi\fi #1}
+\long\def\whsn@next@hop@iv#1\else#2\fi\fi\fi\fi{\fi\fi\fi\fi #1}
+\long\def\whsn@next@hop@v#1\fi\fi\fi\fi{\fi\fi\fi\fi #1}
+
+%------------------------------------------- user interface
+
+\newenvironment{whitesnowman}
+  {\whsn@init\whsn@imp@i}
+  {\whsn@clean}
+
+%------------------------------------------- initialize / clean up
+
+\def\whsn@init{%
+  \catcode`☃=\active
+  \catcode`⛄=\active
+  \def☃{0}\def⛄{1}}
+\def\whsn@clean{%
+  \if@whsn@debug@\message{^^J}\fi}
+
+%------------------------------------------- parser
+
+% IMP
+\long\def\whsn@imp@i#1{%
+  \whsn@next#1{%
+    \whsn@print@op@type{stack}%
+    \whsn@stack@i
+  }{%
+    \whsn@imp@ii
+  }{%
+    \whsn@print@op@type{flow}%
+  }{%
+    \end
+  }{%
+    \whsn@imp@i
+  }}
+\long\def\whsn@imp@ii#1{%
+  \whsn@next#1{%
+    \whsn@print@op@type{arithmetic}%
+  }{%
+    \whsn@print@op@type{heap}%
+  }{%
+    \whsn@print@op@type{i/o}%
+  }{%
+    \whsn@error
+      {End in IMP}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@imp@ii
+  }}
+
+% stack
+\def\whsn@stack@i#1{%
+  \whsn@next#1{%
+    \whsn@print@op{push}%
+    \whsn@stack@push
+  }{%
+    \whsn@error
+      {Invalid stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@stack@ii
+  }{%
+    \whsn@error
+      {Missing stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@stack@i
+  }}
+\def\whsn@stack@ii#1{%
+  \whsn@next#1{%
+    \whsn@print@op{copy}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{swap}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{dup}
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid stack command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@stack@ii
+  }}
+\def\whsn@stack@push#1⛇{%
+  \whsn@imp@i
+}
 
 % All done
 \endinput
