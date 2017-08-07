@@ -17,21 +17,17 @@
 \def\whsn@warn{\PackageWarningNoLine\whsn@pkgname}
 \def\whsn@error{\PackageError\whsn@pkgname}
 
-% code guards
-\edef\whsn@restore@codes{%
-  \catcode`☃=\the\catcode`☃%
-  \catcode`⛄=\the\catcode`⛄%
-\relax}
-\catcode`☃=\active
-\catcode`⛄=\active
-\AtEndOfPackage{%
-  \whsn@restore@codes \let\whsn@restore@codes\relax}
-
 % debug flags
-\newif\if@whsn@debug@ \@whsn@debug@true
 \newif\if@whsn@out@op@type@ \@whsn@out@op@type@true
 \newif\if@whsn@out@op@ \@whsn@out@op@true
 \newif\if@whsn@out@read@ \@whsn@out@read@true
+
+% new ifs / new counts
+\newif\if@whsn@printed@
+\newcount\whsn@pc
+\newcount\whsn@sp
+\newcount\whsn@tmpcnta
+\newcount\whsn@calc
 
 % chars
 \def\whsn@s{☃}
@@ -43,18 +39,40 @@
 % print
 \def\whsn@print@op@type#1{%
   \if@whsn@out@op@type@
+    \@whsn@printed@true
     \message{^^JOP TYPE: #1}%
   \fi}
 \def\whsn@print@op#1{%
   \if@whsn@out@op@
+    \@whsn@printed@true
     \message{^^JOP: #1}%
   \fi}
 \long\def\whsn@print@read#1{%
   \if@whsn@out@read@
+    \@whsn@printed@true
     \message{^^JREAD: \noexpand#1}%
   \fi}
 
-% parse
+% control sequence
+\def\whsn@name@def#1{\expandafter\def\csname #1\endcsname}
+\def\whsn@name@edef#1{\expandafter\edef\csname #1\endcsname}
+
+% reverse
+\def\whsn@reverse#1{\whsn@reverse@#1\relax\@nil\@empty}
+\def\whsn@reverse@#1#2\@nil#3{%
+  \ifx#1\relax#3\else
+    \whsn@reverse@#2\@nil{#1#3}%
+  \fi}
+
+% snowman to number
+\def\whsn@number#1{%
+  \whsn@calc\z@ \whsn@tmpcnta\@ne
+  \edef\whsn@seq{\whsn@reverse{#1}}%
+  \expandafter\@tfor\expandafter\whsn@tmp\expandafter:\expandafter=\whsn@seq
+    \do{\ifx\whsn@t\whsn@tmp \advance\whsn@calc\whsn@tmpcnta \fi
+        \multiply\whsn@tmpcnta\tw@}}
+
+% read next
 \long\def\whsn@next#1#2#3#4#5#6{% cases: ☃ ⛄ ⛇ end ?
   \whsn@print@read{#1}\def\whsn@tmp{#1}%
   \ifx\whsn@s\whsn@tmp\whsn@next@hop@i#2%
@@ -70,20 +88,36 @@
 
 %------------------------------------------- user interface
 
-\newenvironment{whitesnowman}
-  {\whsn@init\whsn@imp@i}
-  {\whsn@clean}
+\newenvironment{whitesnowman}{%
+  \whsn@init
+  \whsn@imp@i
+}{%
+  \whsn@exec
+  \whsn@clean
+}
 
 %------------------------------------------- initialize / clean up
 
 \def\whsn@init{%
-  \catcode`☃=\active
-  \catcode`⛄=\active
-  \def☃{0}\def⛄{1}}
+  \@whsn@printed@false
+  \whsn@pc\z@\whsn@sp\m@ne}
 \def\whsn@clean{%
-  \if@whsn@debug@\message{^^J}\fi}
+  \if@whsn@printed@\message{^^J}\fi}
+
+%------------------------------------------- exec
+
+\def\whsn@exec{%
+  \edef\whsn@nol{\the\whsn@pc}%
+  \whsn@pc\z@
+  \@whilenum\whsn@pc<\whsn@nol\do{%
+    \@nameuse{whsn@ops@\the\whsn@pc}}}
 
 %------------------------------------------- parser
+
+% add to operation list
+\def\whsn@add@ops#1{%
+  \whsn@name@def{whsn@ops@\the\whsn@pc}{#1}%
+  \advance\whsn@pc\@ne}
 
 % IMP
 \long\def\whsn@imp@i#1{%
@@ -106,6 +140,7 @@
     \whsn@print@op@type{heap}%
   }{%
     \whsn@print@op@type{i/o}%
+    \whsn@io@i
   }{%
     \whsn@error
       {End in IMP}
@@ -150,8 +185,81 @@
     \whsn@stack@ii
   }}
 \def\whsn@stack@push#1⛇{%
-  \whsn@imp@i
-}
+  \whsn@add@ops{\whsn@exec@stack@push{#1}}
+  \whsn@imp@i}
+
+% i/o
+\def\whsn@io@i#1{%
+  \whsn@next#1{%
+    \whsn@io@ii@s
+  }{%
+    \whsn@io@ii@t
+  }{%
+    \whsn@error
+      {Invalid I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Missing I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@io@i
+  }}
+\def\whsn@io@ii@s#1{%
+  \whsn@next#1{%
+    \whsn@print@op{write char}
+    \whsn@add@ops{\whsn@exec@io@putchar}
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{write number}
+    \whsn@add@ops{\whsn@exec@io@putnum}
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@io@ii@s
+  }}
+\def\whsn@io@ii@t#1{%
+  \whsn@next#1{%
+    \whsn@print@op{read char}
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{read number}
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid I/O command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@io@ii@t
+  }}
+
+%------------------------------------------- stack
+
+\def\whsn@exec@stack@push#1{%
+  \advance\whsn@pc\@ne
+  \whsn@number{#1}%
+  \advance\whsn@sp\@ne
+  \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@calc}}
+
+%------------------------------------------- i/o
+
+\def\whsn@exec@io@putchar#1{%
+  \advance\whsn@pc\@ne
+  \char\@nameuse{whsn@stack@\the\whsn@sp}}
+\def\whsn@exec@io@putnum#1{%
+  \advance\whsn@pc\@ne
+  \number\@nameuse{whsn@stack@\the\whsn@sp}}
 
 % All done
 \endinput
