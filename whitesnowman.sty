@@ -10,7 +10,7 @@
 
 % package declaration
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{whitesnowman}[2017/08/08 A language of snowman]
+\ProvidesPackage{whitesnowman}[2017/08/08 v1.0 A language of snowmen]
 \def\whsn@pkgname{whitesnowman}
 
 % messages
@@ -66,15 +66,24 @@
 
 % snowman to number
 \def\whsn@number#1#2\@nil{%
-  \whsn@calc\z@ \whsn@tmpcnta\@ne
-  \edef\whsn@seq{\whsn@reverse{#2}}%
-  \expandafter\@tfor\expandafter\whsn@tmp\expandafter:\expandafter=\whsn@seq
-    \do{\ifx\whsn@t\whsn@tmp \advance\whsn@calc\whsn@tmpcnta \fi
-        \multiply\whsn@tmpcnta\tw@}%
-  \def\whsn@tmp{#1}%
-  \ifx\whsn@tmp\whsn@t
-    \multiply\whsn@calc\m@ne
-  \fi}
+  \bgroup
+    \whsn@calc\z@ \whsn@tmpcnta\@ne
+    \edef\whsn@seq{\whsn@reverse{#2}}%
+    \expandafter\@tfor\expandafter\whsn@tmp
+      \expandafter:\expandafter=\whsn@seq\do{%
+        \ifx\whsn@t\whsn@tmp
+          \advance\whsn@calc\whsn@tmpcnta
+          \multiply\whsn@tmpcnta\tw@
+        \fi
+        \ifx\whsn@s\whsn@tmp
+          \multiply\whsn@tmpcnta\tw@
+        \fi}%
+    \def\whsn@tmp{#1}%
+    \ifx\whsn@tmp\whsn@t
+      \multiply\whsn@calc\m@ne
+    \fi
+    \global\whsn@calc\whsn@calc
+  \egroup}
 
 % read next
 \long\def\whsn@next#1#2#3#4#5#6{% cases: ☃ ⛄ ⛇ end ?
@@ -90,31 +99,25 @@
 \long\def\whsn@next@hop@iv#1\else#2\fi\fi\fi\fi{\fi\fi\fi\fi #1}
 \long\def\whsn@next@hop@v#1\fi\fi\fi\fi{\fi\fi\fi\fi #1}
 
-%------------------------------------------- user interface
+%------------------------------------------- main
 
-\newenvironment{whitesnowman}{%
-  \whsn@init
-  \whsn@imp@i
-}{%
-  \whsn@exec
-  \whsn@finish
-}
-
-%------------------------------------------- initialize / finish
+% initialize / finish / exec
 
 \def\whsn@init{%
   \@whsn@printed@false
   \whsn@pc\z@ \whsn@sp\m@ne}
 \def\whsn@finish{%
   \if@whsn@printed@\message{^^J}\fi}
-
-%------------------------------------------- exec
-
 \def\whsn@exec{%
   \edef\whsn@nol{\the\whsn@pc}%
   \whsn@pc\z@
   \@whilenum\whsn@pc<\whsn@nol\do{%
     \@nameuse{whsn@ops@\the\whsn@pc}}}
+
+% user interface
+\newenvironment{whitesnowman}
+  {\whsn@init \whsn@imp@i}
+  {\whsn@exec \whsn@finish}
 
 %------------------------------------------- parser
 
@@ -140,6 +143,7 @@
 \long\def\whsn@imp@ii#1{%
   \whsn@next#1{%
     \whsn@print@op@type{arithmetic}%
+    \whsn@arithmetic@i
   }{%
     \whsn@print@op@type{heap}%
   }{%
@@ -214,6 +218,64 @@
 \def\whsn@stack@copy#1⛇{%
   \whsn@add@ops{\whsn@exec@stack@copy#1\@nil}
   \whsn@imp@i}
+
+% arithmetic
+\def\whsn@arithmetic@i#1{%
+  \whsn@next#1{%
+    \whsn@arithmetic@ii@s
+  }{%
+    \whsn@arithmetic@ii@t
+  }{%
+    \whsn@error
+      {Invalid arithmetic command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Missing arithmetic command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@arithmetic@i
+  }}
+\def\whsn@arithmetic@ii@s#1{%
+  \whsn@next#1{%
+    \whsn@print@op{add}%
+    \whsn@add@ops{\whsn@exec@arithmetic@add}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{sub}%
+    \whsn@add@ops{\whsn@exec@arithmetic@sub}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{mul}%
+    \whsn@add@ops{\whsn@exec@arithmetic@mul}%
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid arithmetic command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@arithmetic@ii@s
+  }}
+\def\whsn@arithmetic@ii@t#1{%
+  \whsn@next#1{%
+    \whsn@print@op{div}%
+    \whsn@add@ops{\whsn@exec@arithmetic@div}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{mod}%
+    \whsn@add@ops{\whsn@exec@arithmetic@mod}%
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid arithmetic command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid arithmetic command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@arithmetic@ii@t
+  }}
 
 % i/o
 \def\whsn@io@i#1{%
@@ -311,6 +373,76 @@
 \def\whsn@exec@stack@discard{%
   \advance\whsn@pc\@ne
   \advance\whsn@sp\m@ne}
+
+%------------------------------------------- arithmetic
+
+\def\whsn@exec@arithmetic@add{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@tmpcnta\@nameuse{whsn@stack@\the\whsn@sp}%
+    \advance\whsn@tmpcnta\whsn@tmp
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@arithmetic@sub{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@tmpcnta\@nameuse{whsn@stack@\the\whsn@sp}%
+    \advance\whsn@tmpcnta-\whsn@tmp
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@arithmetic@mul{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@tmpcnta\@nameuse{whsn@stack@\the\whsn@sp}%
+    \multiply\whsn@tmpcnta\whsn@tmp
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@arithmetic@div{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@tmpcnta\@nameuse{whsn@stack@\the\whsn@sp}%
+    \divide\whsn@tmpcnta\whsn@tmp
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@arithmetic@mod{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@tmpcnta\@nameuse{whsn@stack@\the\whsn@sp}%
+    \divide\whsn@tmpcnta\whsn@tmp \multiply\whsn@tmpcnta\whsn@tmp
+    \advance\whsn@tmpcnta-\@nameuse{whsn@stack@\the\whsn@sp}%
+    \multiply\whsn@tmpcnta\m@ne
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
 
 %------------------------------------------- i/o
 
