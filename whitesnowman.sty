@@ -65,7 +65,7 @@
   \fi}
 
 % snowman to number
-\def\whsn@number#1#2\@nil{%
+\long\def\whsn@number#1#2\@nil{%
   \bgroup
     \whsn@calc\z@ \whsn@tmpcnta\@ne
     \edef\whsn@seq{\whsn@reverse{#2}}%
@@ -83,6 +83,20 @@
       \multiply\whsn@calc\m@ne
     \fi
     \global\whsn@calc\whsn@calc
+  \egroup}
+
+% snowman to label
+\long\def\whsn@label#1\@nil{%
+  \bgroup
+    \let\whsn@seq\@empty
+    \@tfor\whsn@tmp=#1\do{%
+      \ifx\whsn@t\whsn@tmp
+        \edef\whsn@seq{\whsn@seq a}%
+      \fi
+      \ifx\whsn@s\whsn@tmp
+        \edef\whsn@seq{\whsn@seq b}%
+      \fi}%
+    \xdef\whsn@tmp@label{\whsn@seq}%
   \egroup}
 
 % read next
@@ -135,6 +149,7 @@
     \whsn@imp@ii
   }{%
     \whsn@print@op@type{flow}%
+    \whsn@flow@i
   }{%
     \end
   }{%
@@ -159,7 +174,7 @@
   }}
 
 % stack
-\def\whsn@stack@i#1{%
+\long\def\whsn@stack@i#1{%
   \whsn@next#1{%
     \whsn@print@op{push}%
     \whsn@stack@push
@@ -174,7 +189,7 @@
   }{%
     \whsn@stack@i
   }}
-\def\whsn@stack@ii@l#1{%
+\long\def\whsn@stack@ii@l#1{%
   \whsn@next#1{%
     \whsn@print@op{dup}%
     \whsn@add@ops{\whsn@exec@stack@dup}%
@@ -194,7 +209,7 @@
   }{%
     \whsn@stack@ii@l
   }}
-\def\whsn@stack@ii@t#1{%
+\long\def\whsn@stack@ii@t#1{%
   \whsn@next#1{%
     \whsn@print@op{copy}%
     \whsn@stack@copy
@@ -213,15 +228,19 @@
   }{%
     \whsn@stack@ii@t
   }}
-\def\whsn@stack@push#1⛇{%
-  \whsn@add@ops{\whsn@exec@stack@push#1\@nil}
+\long\def\whsn@stack@push#1⛇{%
+  \whsn@number #1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@stack@push\expandafter{\the\whsn@calc}}%
   \whsn@imp@i}
-\def\whsn@stack@copy#1⛇{%
-  \whsn@add@ops{\whsn@exec@stack@copy#1\@nil}
+\long\def\whsn@stack@copy#1⛇{%
+  \whsn@number #1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@stack@copy\expandafter{\the\whsn@calc}}%
   \whsn@imp@i}
 
 % arithmetic
-\def\whsn@arithmetic@i#1{%
+\long\def\whsn@arithmetic@i#1{%
   \whsn@next#1{%
     \whsn@arithmetic@ii@s
   }{%
@@ -237,7 +256,7 @@
   }{%
     \whsn@arithmetic@i
   }}
-\def\whsn@arithmetic@ii@s#1{%
+\long\def\whsn@arithmetic@ii@s#1{%
   \whsn@next#1{%
     \whsn@print@op{add}%
     \whsn@add@ops{\whsn@exec@arithmetic@add}%
@@ -257,7 +276,7 @@
   }{%
     \whsn@arithmetic@ii@s
   }}
-\def\whsn@arithmetic@ii@t#1{%
+\long\def\whsn@arithmetic@ii@t#1{%
   \whsn@next#1{%
     \whsn@print@op{div}%
     \whsn@add@ops{\whsn@exec@arithmetic@div}%
@@ -279,7 +298,7 @@
   }}
 
 % heap
-\def\whsn@heap#1{%
+\long\def\whsn@heap#1{%
   \whsn@next#1{%
     \whsn@print@op{store}%
     \whsn@add@ops{\whsn@exec@heap@store}%
@@ -300,8 +319,102 @@
     \whsn@heap
   }}
 
+% flow
+\long\def\whsn@flow@i#1{%
+  \whsn@next#1{%
+    \whsn@flow@ii@s
+  }{%
+    \whsn@flow@ii@t
+  }{%
+    \whsn@flow@ii@l
+  }{%
+    \whsn@error
+      {Missing flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@flow@i
+  }}
+\long\def\whsn@flow@ii@s#1{%
+  \whsn@next#1{%
+    \whsn@print@op{mark location}%
+    \whsn@flow@mark
+  }{%
+    \whsn@print@op{call subroutine}%
+    \whsn@flow@call
+  }{%
+    \whsn@print@op{jump}%
+    \whsn@flow@jump
+  }{%
+    \whsn@error
+      {Invalid flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@flow@ii@s
+  }}
+\long\def\whsn@flow@ii@t#1{%
+  \whsn@next#1{%
+    \whsn@print@op{jump if zero}%
+    \whsn@flow@jump@z
+  }{%
+    \whsn@print@op{jump if negative}%
+    \whsn@flow@jump@n
+  }{%
+    \whsn@print@op{exit subroutine}%
+    \whsn@add@ops{\whsn@exec@flow@back}%
+  }{%
+    \whsn@error
+      {Invalid flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@flow@ii@t
+  }}
+\long\def\whsn@flow@ii@l#1{%
+  \whsn@next#1{%
+    \whsn@error
+      {Invalid flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Invalid flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@print@op{exit}%
+    \whsn@add@ops{\whsn@exec@flow@exit}%
+  }{%
+    \whsn@error
+      {Invalid flow command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@flow@ii@l
+  }}
+\long\def\whsn@flow@mark#1⛇{%
+  \whsn@label#1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@flow@mark\expandafter{\whsn@tmp@label}}%
+  \whsn@imp@i}
+\long\def\whsn@flow@call#1⛇{%
+  \whsn@label#1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@flow@call\expandafter{\whsn@tmp@label}}%
+  \whsn@imp@i}
+\long\def\whsn@flow@jump#1⛇{%
+  \whsn@label#1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@flow@jump\expandafter{\whsn@tmp@label}}%
+  \whsn@imp@i}
+\long\def\whsn@flow@jump@z#1⛇{%
+  \whsn@label#1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@flow@jump@z\expandafter{\whsn@tmp@label}}%
+  \whsn@imp@i}
+\long\def\whsn@flow@jump@n#1⛇{%
+  \whsn@label#1\@nil
+  \expandafter\whsn@add@ops\expandafter{%
+    \expandafter\whsn@exec@flow@jump@n\expandafter{\whsn@tmp@label}}%
+  \whsn@imp@i}
+
 % i/o
-\def\whsn@io@i#1{%
+\long\def\whsn@io@i#1{%
   \whsn@next#1{%
     \whsn@io@ii@s
   }{%
@@ -317,7 +430,7 @@
   }{%
     \whsn@io@i
   }}
-\def\whsn@io@ii@s#1{%
+\long\def\whsn@io@ii@s#1{%
   \whsn@next#1{%
     \whsn@print@op{put char}%
     \whsn@add@ops{\whsn@exec@io@putchar}%
@@ -337,7 +450,7 @@
   }{%
     \whsn@io@ii@s
   }}
-\def\whsn@io@ii@t#1{%
+\long\def\whsn@io@ii@t#1{%
   \whsn@next#1{%
     \whsn@print@op{read char}%
     \whsn@imp@i
@@ -358,21 +471,18 @@
 
 %------------------------------------------- stack
 
-\def\whsn@exec@stack@push#1\@nil{%
+\def\whsn@exec@stack@push#1{%
+  \advance\whsn@pc\@ne \advance\whsn@sp\@ne
+  \whsn@name@edef{whsn@stack@\the\whsn@sp}{#1}}
+\def\whsn@exec@stack@copy#1{%
   \advance\whsn@pc\@ne
-  \whsn@number #1\@nil
-  \advance\whsn@sp\@ne
-  \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@calc}}
-\def\whsn@exec@stack@copy#1\@nil{%
-  \advance\whsn@pc\@ne
-  \whsn@number #1\@nil
-  \ifnum\whsn@calc<\@ne
+  \ifnum#1<\@ne
     \whsn@error
       {Cannot specify number < 1 for `stack copy' command}
       {Please specify larger number}%
   \fi
   \advance\whsn@sp\@ne
-  \whsn@tmpcnta\whsn@sp \advance\whsn@tmpcnta-\whsn@calc
+  \whsn@tmpcnta\whsn@sp \advance\whsn@tmpcnta-#1\relax
   \ifnum\whsn@tmpcnta>\m@ne
     \whsn@name@edef{whsn@stack@\the\whsn@sp}%
       {\@nameuse{whsn@stack@\the\whsn@tmpcnta}}%
@@ -499,6 +609,11 @@
       {Stack does not have enough values}
       {Please push something to the stack}%
   \fi}
+
+%------------------------------------------- flow
+
+\def\whsn@exec@flow@exit{%
+  \whsn@pc\whsn@nol}
 
 %------------------------------------------- i/o
 
