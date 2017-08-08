@@ -26,6 +26,7 @@
 \newif\if@whsn@printed@
 \newcount\whsn@pc
 \newcount\whsn@sp
+\newcount\whsn@csp
 \newcount\whsn@tmpcnta
 \newcount\whsn@calc
 
@@ -37,6 +38,11 @@
 %------------------------------------------- utility
 
 % print
+\def\whsn@put@#1{%
+  \@whsn@printed@true
+  \edef\whsn@tmp{\noexpand\message{#1}}%
+  \whsn@tmp}
+\let\whsn@put\relax
 \def\whsn@print@op@type#1{%
   \if@whsn@out@op@type@
     \@whsn@printed@true
@@ -89,12 +95,12 @@
 \long\def\whsn@label#1\@nil{%
   \bgroup
     \let\whsn@seq\@empty
-    \@tfor\whsn@tmp=#1\do{%
+    \@tfor\whsn@tmp:=#1\do{%
       \ifx\whsn@t\whsn@tmp
-        \edef\whsn@seq{\whsn@seq a}%
+        \edef\whsn@seq{\whsn@seq\whsn@t}%
       \fi
       \ifx\whsn@s\whsn@tmp
-        \edef\whsn@seq{\whsn@seq b}%
+        \edef\whsn@seq{\whsn@seq\whsn@s}%
       \fi}%
     \xdef\whsn@tmp@label{\whsn@seq}%
   \egroup}
@@ -115,11 +121,15 @@
 
 %------------------------------------------- main
 
-% initialize / finish / exec
+% initialize / finish / execution
 
 \def\whsn@init{%
   \@whsn@printed@false
-  \whsn@pc\z@ \whsn@sp\m@ne}
+  \whsn@pc\z@
+  \whsn@sp\m@ne \whsn@csp\m@ne}
+\def\whsn@pre@exec{%
+  \if@whsn@printed@\message{^^J}\fi
+  \@whsn@printed@false}
 \def\whsn@finish{%
   \if@whsn@printed@\message{^^J}\fi}
 \def\whsn@exec{%
@@ -131,7 +141,9 @@
 % user interface
 \newenvironment{whitesnowman}
   {\whsn@init \whsn@imp@i}
-  {\whsn@exec \whsn@finish}
+  {\whsn@pre@exec \whsn@exec \whsn@finish}
+\newcommand{\WhitesnowmanOutPdf}{\let\whsn@put\relax}
+\newcommand{\WhitesnowmanOutLog}{\let\whsn@put\whsn@put@}
 
 %------------------------------------------- parser
 
@@ -360,7 +372,8 @@
     \whsn@flow@jump@n
   }{%
     \whsn@print@op{exit subroutine}%
-    \whsn@add@ops{\whsn@exec@flow@back}%
+    \whsn@add@ops{\whsn@exec@flow@ret}%
+    \whsn@imp@i
   }{%
     \whsn@error
       {Invalid flow command}
@@ -380,6 +393,7 @@
   }{%
     \whsn@print@op{exit}%
     \whsn@add@ops{\whsn@exec@flow@exit}%
+    \whsn@imp@i
   }{%
     \whsn@error
       {Invalid flow command}
@@ -389,8 +403,8 @@
   }}
 \long\def\whsn@flow@mark#1⛇{%
   \whsn@label#1\@nil
-  \expandafter\whsn@add@ops\expandafter{%
-    \expandafter\whsn@exec@flow@mark\expandafter{\whsn@tmp@label}}%
+  \whsn@name@edef{whsn@label@\whsn@tmp@label}{\the\whsn@pc}%
+  \whsn@add@ops{\whsn@exec@flow@mark}%
   \whsn@imp@i}
 \long\def\whsn@flow@call#1⛇{%
   \whsn@label#1\@nil
@@ -612,22 +626,89 @@
 
 %------------------------------------------- flow
 
-\def\whsn@exec@flow@exit{%
-  \whsn@pc\whsn@nol}
+\def\whsn@exec@flow@mark{\advance\whsn@pc\@ne}
+\def\whsn@exec@flow@call#1{%
+  \@ifundefined{whsn@label@#1}{%
+    \whsn@error
+      {Undefined label `#1'}
+      {Please define the label}%
+  }{%
+    \advance\whsn@csp\@ne \advance\whsn@pc\@ne
+    \whsn@name@edef{whsn@callstack@\the\whsn@csp}{\the\whsn@pc}%
+    \whsn@pc\@nameuse{whsn@label@#1}%
+  }}
+\def\whsn@exec@flow@jump#1{%
+  \@ifundefined{whsn@label@#1}{%
+    \whsn@error
+      {Undefined label `#1'}
+      {Please define the label}%
+  }{%
+    \whsn@pc\@nameuse{whsn@label@#1}%
+  }}
+\def\whsn@exec@flow@jump@z#1{%
+  \ifnum\whsn@sp>\m@ne
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \ifnum\whsn@tmp=\z@
+      \@ifundefined{whsn@label@#1}{%
+        \whsn@error
+          {Undefined label `#1'}
+          {Please define the label}%
+      }{%
+        \whsn@pc\@nameuse{whsn@label@#1}%
+      }%
+    \else
+      \advance\whsn@pc\@ne
+    \fi
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@flow@jump@n#1{%
+  \ifnum\whsn@sp>\m@ne
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \ifnum\whsn@tmp<\z@
+      \@ifundefined{whsn@label@#1}{%
+        \whsn@error
+          {Undefined label `#1'}
+          {Please define the label}%
+      }{%
+        \whsn@pc\@nameuse{whsn@label@#1}%
+      }%
+    \else
+      \advance\whsn@pc\@ne
+    \fi
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@flow@ret{%
+  \ifnum\whsn@csp>\m@ne
+    \whsn@pc\@nameuse{whsn@callstack@\the\whsn@csp}%
+    \advance\whsn@csp\m@ne
+  \else
+    \whsn@error
+      {Not in any subroutine}
+      {Please call some subroutine}%
+  \fi}
+\def\whsn@exec@flow@exit{\whsn@pc\whsn@nol}
 
 %------------------------------------------- i/o
 
 \def\whsn@exec@io@putchar{%
   \advance\whsn@pc\@ne
   \ifnum\whsn@sp>\m@ne
-    \char\@nameuse{whsn@stack@\the\whsn@sp}%
+    \whsn@put{\char\@nameuse{whsn@stack@\the\whsn@sp}}%
   \else
     \whsn@warn{Stack is empty}%
   \fi}
 \def\whsn@exec@io@putnumber{%
   \advance\whsn@pc\@ne
   \ifnum\whsn@sp>\m@ne
-    \number\@nameuse{whsn@stack@\the\whsn@sp}%
+    \whsn@put{\number\@nameuse{whsn@stack@\the\whsn@sp}}%
   \else
     \whsn@warn{Stack is empty}%
   \fi}
