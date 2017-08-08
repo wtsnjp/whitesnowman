@@ -18,8 +18,8 @@
 \def\whsn@error{\PackageError\whsn@pkgname}
 
 % debug flags
-\newif\if@whsn@out@op@type@ \@whsn@out@op@type@true
-\newif\if@whsn@out@op@ \@whsn@out@op@true
+\newif\if@whsn@out@op@type@ \@whsn@out@op@type@false
+\newif\if@whsn@out@op@ \@whsn@out@op@false
 \newif\if@whsn@out@read@ \@whsn@out@read@false
 
 % new ifs / new counts
@@ -733,7 +733,6 @@
   \else
     \whsn@warn{Stack is empty}%
   \fi}
-
 
 % All done
 \endinput

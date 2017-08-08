@@ -1,0 +1,27 @@
+%#!luatex
+\documentclass{article}
+\usepackage{whitesnowman}
+\begin{document}
+
+\begin{whitesnowman}
+☃☃☃⛄⛇ % push 1 -> [1]
+⛄⛇☃⛄
+☃☃☃⛄⛄⛄⛇ % push 7 -> [1,7]
+⛄⛇☃⛄
+⛄⛄☃ % store -> [], {1:7}
+☃☃☃⛄☃⛇ % push 2 -> [2], {1:7}
+⛄⛇☃⛄
+☃☃☃⛄☃☃⛄⛇ % push 9 -> [2,9], {1:7}
+⛄⛇☃⛄
+⛄⛄☃ % store -> [], {1:7, 2:9}
+☃☃☃⛄☃⛇ % push 2 -> [2], {1:7, 2:9}
+⛄⛇☃⛄
+⛄⛄⛄ % retrieve -> [9], {1:7, 2:9}
+⛄⛇☃⛄
+☃☃☃⛄⛇ % push 1 -> [9,1], {1:7, 2:9}
+⛄⛇☃⛄
+⛄⛄⛄ % retrieve -> [9,7], {1:7, 2:9}
+⛄⛇☃⛄
+\end{whitesnowman}
+
+\end{document}

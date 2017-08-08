@@ -1,0 +1,33 @@
+%#!luatex
+\documentclass{article}
+\usepackage{whitesnowman}
+\begin{document}
+
+\begin{whitesnowman}
+☃☃☃☃⛇ % push 0 -> [0]
+⛄⛇☃⛄
+☃☃☃⛄⛇ % push 1 -> [0,1]
+⛄⛇☃⛄
+⛇☃☃⛄⛄⛇ % mark ⛄⛄
+☃☃☃⛄⛇ % push 1 -> [0,1,1] | [0,1]
+⛄⛇☃⛄
+⛄☃☃⛄ % sub -> [0,0] | [-1]
+⛄⛇☃⛄
+⛇⛄☃⛄⛄⛇ % jump to ⛄⛄ if zero
+⛇⛇⛇ % exit
+\end{whitesnowman}
+
+\begin{whitesnowman}
+☃☃☃☃⛇ % push 0 -> [0]
+⛄⛇☃⛄
+⛇☃⛄⛄⛄⛇ % call subroutine ⛄⛄
+☃☃☃⛄☃⛇ % push 2 -> [0,1,2]
+⛄⛇☃⛄
+⛇⛇⛇ % exit
+⛇☃☃⛄⛄⛇ % mark ⛄⛄
+☃☃☃⛄⛇ % push 1 -> [0,1]
+⛄⛇☃⛄
+⛇⛄⛇ % ret
+\end{whitesnowman}
+
+\end{document}

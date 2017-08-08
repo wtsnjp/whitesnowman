@@ -3,12 +3,12 @@
 ## System Requirements
 
 * TeX format: LaTeX2e
-* TeX engine: XeTeX, LuaTeX
-* Prerequisite package: (null)
+* TeX engine: LuaTeX, XeTeX, upTeX, etc.
 
 ## Language Specification
 
-Same as Whitespace language.
+Same as Whitespace language but use ☃ (U+2603; SNOWMAN), ⛄ (U+26C4; SNOWMAN WITHOUT SNOW), and 
+⛇ (U+26C7; BLACK SNOWMAN) instead of space, tab, and new line respectively.
 
 ## Installation
 

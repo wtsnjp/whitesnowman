@@ -1,0 +1,22 @@
+%#!luatex
+\documentclass{article}
+\usepackage{whitesnowman}
+\begin{document}
+
+\begin{whitesnowman}
+☃☃☃⛄⛇ % push 1 -> [1]
+⛄⛇☃⛄
+⛄⛇⛄☃ % get char -> [1], {1:X}
+⛄⛄⛄ % retrieve
+⛄⛇☃☃ % put char => X
+\end{whitesnowman}
+
+\begin{whitesnowman}
+☃☃☃⛄⛇ % push 1 -> [1]
+⛄⛇☃⛄
+⛄⛇⛄⛇ % get number -> [1], {1:X}
+⛄⛄⛄ % retrieve
+⛄⛇☃⛄ % put number => X
+\end{whitesnowman}
+
+\end{document}
