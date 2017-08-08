@@ -64,8 +64,8 @@
 \def\whsn@name@edef#1{\expandafter\edef\csname #1\endcsname}
 
 % reverse
-\def\whsn@reverse#1{\whsn@reverse@#1\relax\@nil\@empty}
-\def\whsn@reverse@#1#2\@nil#3{%
+\long\def\whsn@reverse#1{\whsn@reverse@#1\relax\@nil\@empty}
+\long\def\whsn@reverse@#1#2\@nil#3{%
   \ifx#1\relax#3\else
     \whsn@reverse@#2\@nil{#1#3}%
   \fi}
@@ -466,15 +466,17 @@
   }}
 \long\def\whsn@io@ii@t#1{%
   \whsn@next#1{%
-    \whsn@print@op{read char}%
-    \whsn@imp@i
-  }{%
-    \whsn@print@op{read number}%
+    \whsn@print@op{get char}%
+    \whsn@add@ops{\whsn@exec@io@getchar}%
     \whsn@imp@i
   }{%
     \whsn@error
       {Invalid I/O command}
       {Check your whitesnowman code}%
+  }{%
+    \whsn@print@op{get number}%
+    \whsn@add@ops{\whsn@exec@io@getnumber}%
+    \whsn@imp@i
   }{%
     \whsn@error
       {Invalid I/O command}
@@ -712,6 +714,26 @@
   \else
     \whsn@warn{Stack is empty}%
   \fi}
+\def\whsn@exec@io@getchar{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\m@ne
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \read16 to \whsn@input@char
+    \whsn@name@edef{whsn@heap@\whsn@tmp}{%
+      \expandafter\number\expandafter`\whsn@input@char}%
+  \else
+    \whsn@warn{Stack is empty}%
+  \fi}
+\def\whsn@exec@io@getnumber{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\m@ne
+    \edef\whsn@tmp{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \read16 to \whsn@input@number
+    \whsn@name@edef{whsn@heap@\whsn@tmp}{\number\whsn@input@number}%
+  \else
+    \whsn@warn{Stack is empty}%
+  \fi}
+
 
 % All done
 \endinput
