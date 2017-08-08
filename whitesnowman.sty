@@ -146,6 +146,7 @@
     \whsn@arithmetic@i
   }{%
     \whsn@print@op@type{heap}%
+    \whsn@heap
   }{%
     \whsn@print@op@type{i/o}%
     \whsn@io@i
@@ -275,6 +276,28 @@
       {Check your whitesnowman code}%
   }{%
     \whsn@arithmetic@ii@t
+  }}
+
+% heap
+\def\whsn@heap#1{%
+  \whsn@next#1{%
+    \whsn@print@op{store}%
+    \whsn@add@ops{\whsn@exec@heap@store}%
+    \whsn@imp@i
+  }{%
+    \whsn@print@op{retrieve}%
+    \whsn@add@ops{\whsn@exec@heap@retrieve}%
+    \whsn@imp@i
+  }{%
+    \whsn@error
+      {Invalid heap command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@error
+      {Missing heap command}
+      {Check your whitesnowman code}%
+  }{%
+    \whsn@heap
   }}
 
 % i/o
@@ -438,6 +461,39 @@
     \advance\whsn@tmpcnta-\@nameuse{whsn@stack@\the\whsn@sp}%
     \multiply\whsn@tmpcnta\m@ne
     \whsn@name@edef{whsn@stack@\the\whsn@sp}{\the\whsn@tmpcnta}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+
+%------------------------------------------- heap
+
+\def\whsn@exec@heap@store{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\z@
+    \edef\whsn@val{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \edef\whsn@addr{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \advance\whsn@sp\m@ne
+    \whsn@name@edef{whsn@heap@\whsn@addr}{\whsn@val}%
+  \else
+    \whsn@error
+      {Stack does not have enough values}
+      {Please push something to the stack}%
+  \fi}
+\def\whsn@exec@heap@retrieve{%
+  \advance\whsn@pc\@ne
+  \ifnum\whsn@sp>\m@ne
+    \edef\whsn@addr{\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \@ifundefined{whsn@heap@\whsn@addr}{%
+      \whsn@error
+        {No value in heap at the specified address}
+        {Please check the adress}%
+    }{%
+      \edef\whsn@val{\@nameuse{whsn@heap@\whsn@addr}}%
+    }%
+    \whsn@name@edef{whsn@stack@\the\whsn@sp}{\whsn@val}%
   \else
     \whsn@error
       {Stack does not have enough values}
