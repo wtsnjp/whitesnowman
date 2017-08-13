@@ -22,8 +22,9 @@
 \newif\if@whsn@out@op@ \@whsn@out@op@false
 \newif\if@whsn@out@read@ \@whsn@out@read@false
 
-% new ifs / new counts
+% new if / new write / new counts
 \newif\if@whsn@printed@
+\newwrite\whsn@outfile
 \newcount\whsn@pc
 \newcount\whsn@sp
 \newcount\whsn@csp
@@ -38,11 +39,16 @@
 %------------------------------------------- utility
 
 % print
-\def\whsn@put@#1{%
+\def\whsn@put@log#1{%
   \@whsn@printed@true
-  \edef\whsn@tmp{\noexpand\message{#1}}%
+  \edef\whsn@tmp{\noexpand\message{^^J#1}}%
   \whsn@tmp}
+\def\whsn@put@file#1#2{%
+  \immediate\openout\whsn@outfile=#1\relax
+  \immediate\write\whsn@outfile{#2}%
+  \immediate\closeout\whsn@outfile}
 \let\whsn@put\relax
+\def\whsn@add@output#1{\edef\whsn@output{\whsn@output #1}}
 \def\whsn@print@op@type#1{%
   \if@whsn@out@op@type@
     \@whsn@printed@true
@@ -58,6 +64,14 @@
     \@whsn@printed@true
     \message{^^JREAD: \noexpand#1}%
   \fi}
+
+% expandable char
+\begingroup
+  \catcode0=12\relax
+  \global\def\chrdef#1#2{%
+    \begingroup\lccode0=\numexpr(#2)\relax
+    \lowercase{\endgroup\def#1{^^@}}}%
+\endgroup
 
 % control sequence
 \def\whsn@name@def#1{\expandafter\def\csname #1\endcsname}
@@ -128,22 +142,25 @@
   \whsn@pc\z@
   \whsn@sp\m@ne \whsn@csp\m@ne}
 \def\whsn@pre@exec{%
+  \let\whsn@output\@empty
   \if@whsn@printed@\message{^^J}\fi
   \@whsn@printed@false}
-\def\whsn@finish{%
-  \if@whsn@printed@\message{^^J}\fi}
 \def\whsn@exec{%
   \edef\whsn@nol{\the\whsn@pc}%
   \whsn@pc\z@
   \@whilenum\whsn@pc<\whsn@nol\do{%
     \@nameuse{whsn@ops@\the\whsn@pc}}}
+\def\whsn@finish{%
+  \if@whsn@printed@\message{^^J}\fi
+  \whsn@put{\whsn@output}}
 
 % user interface
 \newenvironment{whitesnowman}
   {\whsn@init \whsn@imp@i}
   {\whsn@pre@exec \whsn@exec \whsn@finish}
 \newcommand{\WhitesnowmanOutPdf}{\let\whsn@put\relax}
-\newcommand{\WhitesnowmanOutLog}{\let\whsn@put\whsn@put@}
+\newcommand{\WhitesnowmanOutLog}{\let\whsn@put\whsn@put@log}
+\newcommand{\WhitesnowmanOutFile}[1]{\def\whsn@put{\whsn@put@file{#1}}}
 
 %------------------------------------------- parser
 
@@ -703,14 +720,16 @@
 \def\whsn@exec@io@putchar{%
   \advance\whsn@pc\@ne
   \ifnum\whsn@sp>\m@ne
-    \whsn@put{\char\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \expandafter\chrdef\expandafter\whsn@tmp\expandafter{%
+      \@nameuse{whsn@stack@\the\whsn@sp}}%
+    \whsn@add@output{\whsn@tmp}%
   \else
     \whsn@warn{Stack is empty}%
   \fi}
 \def\whsn@exec@io@putnumber{%
   \advance\whsn@pc\@ne
   \ifnum\whsn@sp>\m@ne
-    \whsn@put{\number\@nameuse{whsn@stack@\the\whsn@sp}}%
+    \whsn@add@output{\number\@nameuse{whsn@stack@\the\whsn@sp}}%
   \else
     \whsn@warn{Stack is empty}%
   \fi}
